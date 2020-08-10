@@ -140,6 +140,26 @@ def draw_umich_gaussian(heatmap, center, radius, k=1):
     np.maximum(masked_heatmap, masked_gaussian * k, out=masked_heatmap)
   return heatmap
 
+##################### 2.21 attention ##############3
+def draw_attention(attmap, center, h, w):
+  x, y = int(center[0]), int(center[1])
+
+  height, width = attmap.shape[0:2]
+    
+  left, right = min(x, int(w/2)), min(width - x, int(w/2 + 1))
+  top, bottom = min(y, int(h/2)), min(height - y, int(h/2 + 1))
+
+  ################ mid-ground ###################
+  m_l, m_r = min(x, int(w*3/4)), min(width - x, int(w*3/4 + 1))
+  m_t, m_b = min(y, int(h*3/4)), min(height - y, int(h*3/4 + 1))
+
+  attmap[y - m_t:y + m_b, x - m_l:x + m_r] = 0.5
+  ###############################################
+
+  attmap[y - top:y + bottom, x - left:x + right] = 1.0
+  return attmap
+#######################################################
+
 def draw_dense_reg(regmap, heatmap, center, value, radius, is_offset=False):
   diameter = 2 * radius + 1
   gaussian = gaussian2D((diameter, diameter), sigma=diameter / 6)

@@ -1,6 +1,3 @@
-"""
-添加了Self-Branch 和 Skip-Connection for WH Regression, 修改在class DLASeg中
-"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -444,10 +441,9 @@ class Interpolate(nn.Module):
 
 class DLASeg(nn.Module):
     def __init__(self, base_name, heads, pretrained, down_ratio, final_kernel,
-                 last_level, head_conv, out_channel=0, attention=False):
+                 last_level, head_conv, out_channel=0):
         super(DLASeg, self).__init__()
         assert down_ratio in [2, 4, 8, 16]
-        self.attention = attention
         self.first_level = int(np.log2(down_ratio))
         self.last_level = last_level
         self.base = globals()[base_name](pretrained=pretrained)
@@ -461,32 +457,15 @@ class DLASeg(nn.Module):
         self.ida_up = IDAUp(out_channel, channels[self.first_level:self.last_level], 
                             [2 ** i for i in range(self.last_level - self.first_level)])
         
-        # Foreground Region Proposal
-        if self.attention:
-            self.att_seg = nn.Sequential(
-                nn.Conv2d(channels[self.first_level], head_conv, kernel_size=3, padding=1, bias=True),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(head_conv, head_conv, kernel_size=3, padding=1, bias=True),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(head_conv, heads['hm'], kernel_size=3, padding=1, bias=True),
-                # nn.Conv2d(head_conv, 1, kernel_size=3, padding=1, bias=True),
-                nn.Sigmoid())
-            
         # Heads
         self.heads = heads
         for head in self.heads:
             classes = self.heads[head]
             if head_conv > 0:
-              if self.attention and ('wh' in head):
-                fc = nn.Sequential(
-                    nn.Conv2d(channels[self.first_level]+heads['hm'], head_conv, kernel_size=3, padding=1, bias=True),
-                    nn.ReLU(inplace=True),
-                    nn.Conv2d(head_conv, classes, kernel_size=final_kernel, stride=1, padding=final_kernel // 2, bias=True))
-              else:
-                fc = nn.Sequential(
-                    nn.Conv2d(channels[self.first_level], head_conv, kernel_size=3, padding=1, bias=True),
-                    nn.ReLU(inplace=True),
-                    nn.Conv2d(head_conv, classes, kernel_size=final_kernel, stride=1, padding=final_kernel // 2, bias=True))
+              fc = nn.Sequential(
+                  nn.Conv2d(channels[self.first_level], head_conv, kernel_size=3, padding=1, bias=True),
+                  nn.ReLU(inplace=True),
+                  nn.Conv2d(head_conv, classes, kernel_size=final_kernel, stride=1, padding=final_kernel // 2, bias=True))
               if 'hm' in head:
                 fc[-1].bias.data.fill_(-2.19)
               else:
@@ -510,36 +489,18 @@ class DLASeg(nn.Module):
             y.append(x[i].clone())
         self.ida_up(y, 0, len(y))
 
-        # Foreground Region Proposal
         z = {}
-        if self.attention:
-            # Self-Branch
-            att = y[-1].clone()
-            att = self.att_seg(att)
-            z['att'] = att
-            # Max Operation
-            att_1 = torch.max(att.detach(), 1)[0].unsqueeze(1)               
-
-
         for head in self.heads:
-            if self.attention and ('hm' in head):
-                z[head] = self.__getattr__(head)(y[-1]*att_1)
-            elif self.attention and ('wh' in head):
-                att_wh = torch.cat((y[-1]*att_1, att.detach()), 1) # Skip-Connection for WH Regression
-                z[head] = self.__getattr__(head)(att_wh)            
-            else:
-                z[head] = self.__getattr__(head)(y[-1])
-
+            z[head] = self.__getattr__(head)(y[-1])
         return [z]
     
 
-def get_pose_net(num_layers, heads, head_conv=256, down_ratio=4, attention=False):
+def get_pose_net(num_layers, heads, head_conv=256, down_ratio=4):
   model = DLASeg('dla{}'.format(num_layers), heads,
                  pretrained=True,
                  down_ratio=down_ratio,
                  final_kernel=1,
                  last_level=5,
-                 head_conv=head_conv,
-                 attention=attention)
+                 head_conv=head_conv)
   return model
 

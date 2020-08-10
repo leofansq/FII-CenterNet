@@ -10,7 +10,7 @@ import cv2
 import os
 from utils.image import flip, color_aug
 from utils.image import get_affine_transform, affine_transform
-from utils.image import gaussian_radius, draw_umich_gaussian, draw_msra_gaussian
+from utils.image import gaussian_radius, draw_umich_gaussian, draw_msra_gaussian, draw_attention
 from utils.image import draw_dense_reg
 import math
 
@@ -67,11 +67,8 @@ class CTDetDataset(data.Dataset):
         c[0] =  width - c[0] - 1
         
 
-    trans_input = get_affine_transform(
-      c, s, 0, [input_w, input_h])
-    inp = cv2.warpAffine(img, trans_input, 
-                         (input_w, input_h),
-                         flags=cv2.INTER_LINEAR)
+    trans_input = get_affine_transform(c, s, 0, [input_w, input_h])
+    inp = cv2.warpAffine(img, trans_input, (input_w, input_h), flags=cv2.INTER_LINEAR)
     inp = (inp.astype(np.float32) / 255.)
     if self.split == 'train' and not self.opt.no_color_aug:
       color_aug(self._data_rng, inp, self._eig_val, self._eig_vec)
@@ -91,6 +88,10 @@ class CTDetDataset(data.Dataset):
     reg_mask = np.zeros((self.max_objs), dtype=np.uint8)
     cat_spec_wh = np.zeros((self.max_objs, num_classes * 2), dtype=np.float32)
     cat_spec_mask = np.zeros((self.max_objs, num_classes * 2), dtype=np.uint8)
+    ############### 2.21 att ############3
+    att = np.zeros((num_classes, output_h, output_w), dtype=np.float32)
+    # att = np.zeros((1, output_h, output_w), dtype=np.float32)
+    ######################################
     
     draw_gaussian = draw_msra_gaussian if self.opt.mse_loss else \
                     draw_umich_gaussian
@@ -115,6 +116,10 @@ class CTDetDataset(data.Dataset):
           [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2], dtype=np.float32)
         ct_int = ct.astype(np.int32)
         draw_gaussian(hm[cls_id], ct_int, radius)
+        ########## 2.21 att ###############
+        draw_attention(att[cls_id], ct_int, h, w)
+        # draw_attention(att, ct_int, h, w)
+        ###################################
         wh[k] = 1. * w, 1. * h
         ind[k] = ct_int[1] * output_w + ct_int[0]
         reg[k] = ct - ct_int
@@ -126,7 +131,7 @@ class CTDetDataset(data.Dataset):
         gt_det.append([ct[0] - w / 2, ct[1] - h / 2, 
                        ct[0] + w / 2, ct[1] + h / 2, 1, cls_id])
     
-    ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh}
+    ret = {'input': inp, 'hm': hm, 'reg_mask': reg_mask, 'ind': ind, 'wh': wh, 'att':att}
     if self.opt.dense_wh:
       hm_a = hm.max(axis=0, keepdims=True)
       dense_wh_mask = np.concatenate([hm_a, hm_a], axis=0)

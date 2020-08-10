@@ -43,6 +43,8 @@ class Debugger(object):
         (255, 0, 0), (0, 0, 255)]
     elif num_classes == 80 or dataset == 'coco':
       self.names = coco_class_name
+    # elif num_classes == -1 or dataset == 'kitti_coco':
+    #   self.names = kitti_coco_class_name
     elif num_classes == 20 or dataset == 'pascal':
       self.names = pascal_class_name
     elif dataset == 'gta':
@@ -172,6 +174,8 @@ class Debugger(object):
     bbox = np.array(bbox, dtype=np.int32)
     # cat = (int(cat) + 1) % 80
     cat = int(cat)
+    ####### kitti_coco #######
+    # cat = int(cat-1)
     # print('cat', cat, self.names[cat])
     c = self.colors[cat][0][0].tolist()
     if self.theme == 'white':
@@ -429,7 +433,7 @@ class Debugger(object):
 
 
 kitti_class_name = [
-  'p', 'v', 'b'
+  'Car', 'Pedestrian', 'Cyclist'
 ]
 
 gta_class_name = [
@@ -456,13 +460,14 @@ coco_class_name = [
      'scissors', 'teddy bear', 'hair drier', 'toothbrush'
 ]
 
+kitti_coco_class_name = ['car', 'pedestrian']
+
 color_list = np.array(
         [
             1.000, 1.000, 1.000,
-            0.850, 0.325, 0.098,
             0.929, 0.694, 0.125,
-            0.494, 0.184, 0.556,
             0.466, 0.674, 0.188,
+            0.494, 0.184, 0.556,
             0.301, 0.745, 0.933,
             0.635, 0.078, 0.184,
             0.300, 0.300, 0.300,
@@ -536,6 +541,7 @@ color_list = np.array(
             0.571, 0.571, 0.571,
             0.714, 0.714, 0.714,
             0.857, 0.857, 0.857,
+            0.850, 0.325, 0.098,
             0.000, 0.447, 0.741,
             0.50, 0.5, 0
         ]

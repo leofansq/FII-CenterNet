@@ -1,5 +1,5 @@
 """
-添加了Self-Branch 和 Skip-Connection for WH Regression, 修改在class DLASeg中
+添加了Self-Branch 和 Up-Branch, 并试验了两种Fusion方式(Cat和Sum), 修改在class DLASeg中
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -398,6 +398,29 @@ class IDAUp(nn.Module):
             node = getattr(self, 'node_' + str(i - startp))
             layers[i] = node(layers[i] + layers[i - 1])
 
+class SegUp(nn.Module):
+
+    def __init__(self, channels):
+        super(SegUp, self).__init__()
+
+        for i in range(len(channels)-1):
+            c_in = channels[i]
+            c_out = channels[i+1]
+            proj = DeformConv(c_in, c_out)
+            up = nn.ConvTranspose2d(c_out, c_out, 4, stride=2, padding=1, output_padding=0, groups=c_out, bias=False)
+            fill_up_weights(up)
+
+            setattr(self, 'proj_' + str(i), proj)
+            setattr(self, 'up_' + str(i), up)
+
+    def forward(self, x, steps):
+        out = x
+        for i in range(steps):
+            upsample = getattr(self, 'up_' + str(i))
+            project = getattr(self, 'proj_' + str(i))
+            out = upsample(project(out))
+        return out
+
 
 
 class DLAUp(nn.Module):
@@ -463,6 +486,8 @@ class DLASeg(nn.Module):
         
         # Foreground Region Proposal
         if self.attention:
+            self.seg_up = SegUp([512, 256, 128, 64])
+            self.seg_sum = DeformConv(128, 64)
             self.att_seg = nn.Sequential(
                 nn.Conv2d(channels[self.first_level], head_conv, kernel_size=3, padding=1, bias=True),
                 nn.ReLU(inplace=True),
@@ -479,7 +504,7 @@ class DLASeg(nn.Module):
             if head_conv > 0:
               if self.attention and ('wh' in head):
                 fc = nn.Sequential(
-                    nn.Conv2d(channels[self.first_level]+heads['hm'], head_conv, kernel_size=3, padding=1, bias=True),
+                    nn.Conv2d(channels[self.first_level], head_conv, kernel_size=3, padding=1, bias=True),
                     nn.ReLU(inplace=True),
                     nn.Conv2d(head_conv, classes, kernel_size=final_kernel, stride=1, padding=final_kernel // 2, bias=True))
               else:
@@ -502,6 +527,7 @@ class DLASeg(nn.Module):
     def forward(self, x):
         # 下采样:x 为逐层结果 [4,8,16,32]
         x = self.base(x)
+        seg = x[-1].detach()
         # DLA: x为上采样逐层结果 [4,8,16,32]
         x = self.dla_up(x)
         # Skip Connection(IDA): y[4,8,16,32], y[-1]为最终结果
@@ -513,22 +539,32 @@ class DLASeg(nn.Module):
         # Foreground Region Proposal
         z = {}
         if self.attention:
-            # Self-Branch
-            att = y[-1].clone()
+            # Up-Branch            
+            att = self.seg_up(seg, 3)
+
+            # Fusion: cat
+            #att = torch.cat((y[-1].clone(), att), 1)
+            #att = self.seg_sum(att)
+
+            # Fusion: sum
+            #att = y[-1].clone() + att
+
             att = self.att_seg(att)
             z['att'] = att
             # Max Operation
-            att_1 = torch.max(att.detach(), 1)[0].unsqueeze(1)               
-
+            att_1 = torch.max(att.detach(), 1)[0].unsqueeze(1)    
 
         for head in self.heads:
             if self.attention and ('hm' in head):
                 z[head] = self.__getattr__(head)(y[-1]*att_1)
             elif self.attention and ('wh' in head):
-                att_wh = torch.cat((y[-1]*att_1, att.detach()), 1) # Skip-Connection for WH Regression
-                z[head] = self.__getattr__(head)(att_wh)            
+                # wh_att = torch.cat((y[-1], att.detach()), 1)
+                z[head] = self.__getattr__(head)(y[-1]*att_1)
             else:
                 z[head] = self.__getattr__(head)(y[-1])
+            # if self.attention and (('hm' in head) or ('wh' in head)):
+            # if self.attention and ('hm' in head):
+                # z[head] *= att
 
         return [z]
     

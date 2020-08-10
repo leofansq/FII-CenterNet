@@ -79,6 +79,11 @@ class CtdetDetector(BaseDetector):
       img = images[i].detach().cpu().numpy().transpose(1, 2, 0)
       img = ((img * self.std + self.mean) * 255).astype(np.uint8)
       pred = debugger.gen_colormap(output['hm'][i].detach().cpu().numpy())
+      #####################
+      if self.opt.attention:
+        att = debugger.gen_colormap(output['att'][i].detach().cpu().numpy())
+        debugger.add_blend_img(img, att, 'pred_att_{:.1f}'.format(scale))
+      #######################
       debugger.add_blend_img(img, pred, 'pred_hm_{:.1f}'.format(scale))
       debugger.add_img(img, img_id='out_pred_{:.1f}'.format(scale))
       for k in range(len(dets[i])):
@@ -93,4 +98,5 @@ class CtdetDetector(BaseDetector):
       for bbox in results[j]:
         if bbox[4] > self.opt.vis_thresh:
           debugger.add_coco_bbox(bbox[:4], j - 1, bbox[4], img_id='ctdet')
-    debugger.show_all_imgs(pause=self.pause)
+    # debugger.show_all_imgs(pause=self.pause)
+    debugger.save_all_imgs(path='/data1/zhufenghua/leofansq/cnet/output/', genID=True)

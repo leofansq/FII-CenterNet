@@ -12,7 +12,7 @@ import time
 from progress.bar import Bar
 import torch
 
-from external.nms import soft_nms
+# from external.nms import soft_nms
 from opts import opts
 from logger import Logger
 from utils.utils import AverageMeter
@@ -107,7 +107,8 @@ def test(opt):
     else:
       ret = detector.run(img_path)
     
-    results[img_id] = ret['results']
+    # results[img_id] = ret['results']
+    results[img_info['file_name'][:-4]] = ret['results']
 
     Bar.suffix = '[{0}/{1}]|Tot: {total:} |ETA: {eta:} '.format(
                    ind, num_iters, total=bar.elapsed_td, eta=bar.eta_td)

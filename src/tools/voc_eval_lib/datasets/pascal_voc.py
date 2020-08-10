@@ -22,6 +22,8 @@ import uuid
 from .voc_eval import voc_eval
 from model.config import cfg
 
+import matplotlib.pyplot as plt
+
 
 class pascal_voc(imdb):
   def __init__(self, image_set, year, use_diff=False):
@@ -32,13 +34,19 @@ class pascal_voc(imdb):
     self._year = year
     self._image_set = image_set
     self._devkit_path = self._get_default_path()
-    self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
+    # self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
+    self._data_path = os.path.join(self._devkit_path)
     self._classes = ('__background__',  # always index 0
                      'aeroplane', 'bicycle', 'bird', 'boat',
                      'bottle', 'bus', 'car', 'cat', 'chair',
                      'cow', 'diningtable', 'dog', 'horse',
                      'motorbike', 'person', 'pottedplant',
                      'sheep', 'sofa', 'train', 'tvmonitor')
+    # self._classes = ('__background__', "car", "person", "bicycle")
+    # self._classes = ('__background__', 'car', 'person', 'bicycle', 'bus', 'motorbike')
+    # self._classes = ('__background__', 'car', 'person', 'bicycle', 'motorbike')    
+    
+
     self._class_to_ind = dict(list(zip(self.classes, list(range(self.num_classes)))))
     self._image_ext = '.jpg'
     self._image_index = self._load_image_set_index()
@@ -81,8 +89,8 @@ class pascal_voc(imdb):
     """
     # Example path to image set file:
     # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
-    image_set_file = os.path.join(self._data_path, 'ImageSets', 'Main',
-                                  self._image_set + '.txt')
+    # image_set_file = os.path.join(self._data_path, 'ImageSets', 'Main', self._image_set + '.txt')
+    image_set_file = os.path.join(self._data_path, self._image_set + '.txt')
     assert os.path.exists(image_set_file), \
       'Path does not exist: {}'.format(image_set_file)
     with open(image_set_file) as f:
@@ -93,7 +101,8 @@ class pascal_voc(imdb):
     """
     Return the default path where PASCAL VOC is expected to be installed.
     """
-    return os.path.join(cfg.DATA_DIR, 'voc', 'VOCdevkit')
+    # return os.path.join(cfg.DATA_DIR, 'voc', 'VOCdevkit')
+    return os.path.join(cfg.DATA_DIR, 'VOC_COCO')
 
   def gt_roidb(self):
     """
@@ -191,13 +200,10 @@ class pascal_voc(imdb):
 
   def _get_voc_results_file_template(self):
     # VOCdevkit/results/VOC2007/Main/<comp_id>_det_test_aeroplane.txt
-    filename = self._get_comp_id() + '_det_' + self._image_set + '_{:s}.txt'
-    path = os.path.join(
-      self._devkit_path,
-      'results',
-      'VOC' + self._year,
-      'Main',
-      filename)
+    # filename = self._get_comp_id() + '_det_' + self._image_set + '_{:s}.txt'
+    # path = os.path.join(self._devkit_path,'results', 'VOC' + self._year,'Main',filename)
+    filename = self._image_set + '_{:s}.txt'
+    path = os.path.join(self._devkit_path,'results',filename)
     return path
 
   def _write_voc_results_file(self, all_boxes):
@@ -220,17 +226,10 @@ class pascal_voc(imdb):
                            dets[k, 2] + 1, dets[k, 3] + 1))
 
   def _do_python_eval(self, output_dir=None):
-    annopath = os.path.join(
-      self._devkit_path,
-      'VOC' + self._year,
-      'Annotations',
-      '{:s}.xml')
-    imagesetfile = os.path.join(
-      self._devkit_path,
-      'VOC' + self._year,
-      'ImageSets',
-      'Main',
-      self._image_set + '.txt')
+    # annopath = os.path.join(self._devkit_path,'VOC' + self._year,'Annotations','{:s}.xml')
+    annopath = os.path.join(self._devkit_path,'Annotations','{:s}.xml')
+    # imagesetfile = os.path.join(self._devkit_path,'VOC' + self._year,'ImageSets','Main',self._image_set + '.txt')
+    imagesetfile = os.path.join(self._devkit_path, self._image_set + '.txt')
     cachedir = os.path.join(self._devkit_path, 'annotations_cache')
     aps = []
     # The PASCAL VOC metric changed in 2010
@@ -238,6 +237,15 @@ class pascal_voc(imdb):
     print('VOC07 metric? ' + ('Yes' if use_07_metric else 'No'))
     if output_dir is not None and not os.path.isdir(output_dir):
       os.mkdir(output_dir)
+
+    ########################################################
+    # draw the Precision/Recall curve
+    ########################################################
+    plt.switch_backend('agg')
+    fig = plt.figure()
+    ########################################################
+
+
     for i, cls in enumerate(self._classes):
       if cls == '__background__':
         continue
@@ -245,11 +253,35 @@ class pascal_voc(imdb):
       rec, prec, ap = voc_eval(
         filename, annopath, imagesetfile, cls, cachedir, ovthresh=0.5,
         use_07_metric=use_07_metric, use_diff=self.config['use_diff'])
+
+      ########################################################
+      # draw the Precision/Recall curve for this class
+      ########################################################
+      if cls in ['car', 'person', 'bicycle', 'motorbike']: # ,'car','person', 'bicycle'
+        # continue
+        plt.plot(rec, prec, label='{:s} (AP={:.4f})'.format(cls, ap)) # , color='red'
+      ########################################################
+
       aps += [ap]
       print(('AP for {} = {:.4f}'.format(cls, ap)))
       if output_dir is not None:
         with open(os.path.join(output_dir, cls + '_pr.pkl'), 'wb') as f:
           pickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
+    
+    ########################################################
+    # draw the Precision/Recall curve for all classes
+    ########################################################
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.0])
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.legend(loc='lower left')
+    # plt.title('pascal voc P/R curve')
+    print (self._devkit_path)
+    fig.savefig(os.path.join(self._devkit_path,'pr_curve_pascal_voc.jpg'),bbox_inches='tight')
+    print("fig saved at {}".format(self._devkit_path))
+    ########################################################
+
     print(('Mean AP = {:.4f}'.format(np.mean(aps))))
     print('~~~~~~~~')
     '''

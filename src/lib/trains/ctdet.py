@@ -28,6 +28,9 @@ class CtdetLoss(torch.nn.Module):
   def forward(self, outputs, batch):
     opt = self.opt
     hm_loss, wh_loss, off_loss = 0, 0, 0
+    ####################  2.20  ##################
+    if opt.attention: att_loss = 0
+    ##############################################
     for s in range(opt.num_stacks):
       output = outputs[s]
       if not opt.mse_loss:
@@ -47,6 +50,10 @@ class CtdetLoss(torch.nn.Module):
           output['reg'].shape[3], output['reg'].shape[2])).to(opt.device)
 
       hm_loss += self.crit(output['hm'], batch['hm']) / opt.num_stacks
+      ####################  2.20  ##################
+      if opt.attention:
+        att_loss += self.crit(output['att'], batch['att']) / opt.num_stacks
+      ##############################################
       if opt.wh_weight > 0:
         if opt.dense_wh:
           mask_weight = batch['dense_wh_mask'].sum() + 1e-4
@@ -71,14 +78,26 @@ class CtdetLoss(torch.nn.Module):
            opt.off_weight * off_loss
     loss_stats = {'loss': loss, 'hm_loss': hm_loss,
                   'wh_loss': wh_loss, 'off_loss': off_loss}
+    ##################### 2.20  #############################
+    if opt.attention:
+      loss += opt.att_weight * att_loss
+      loss_stats['att_loss']=att_loss
+    #########################################################
     return loss, loss_stats
 
 class CtdetTrainer(BaseTrainer):
+  """
+  Gnerate CtdetTrainer
+  """
   def __init__(self, opt, model, optimizer=None):
     super(CtdetTrainer, self).__init__(opt, model, optimizer=optimizer)
   
   def _get_losses(self, opt):
     loss_states = ['loss', 'hm_loss', 'wh_loss', 'off_loss']
+    ###################  2.20  #######################
+    if opt.attention:
+      loss_states.append('att_loss')
+    ##################################################
     loss = CtdetLoss(opt)
     return loss_states, loss
 

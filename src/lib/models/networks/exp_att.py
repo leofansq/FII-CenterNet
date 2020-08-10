@@ -1,5 +1,5 @@
 """
-添加了Self-Branch 和 Skip-Connection for WH Regression, 修改在class DLASeg中
+添加了self-branch分支, 修改在class DLASeg中
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -477,16 +477,10 @@ class DLASeg(nn.Module):
         for head in self.heads:
             classes = self.heads[head]
             if head_conv > 0:
-              if self.attention and ('wh' in head):
-                fc = nn.Sequential(
-                    nn.Conv2d(channels[self.first_level]+heads['hm'], head_conv, kernel_size=3, padding=1, bias=True),
-                    nn.ReLU(inplace=True),
-                    nn.Conv2d(head_conv, classes, kernel_size=final_kernel, stride=1, padding=final_kernel // 2, bias=True))
-              else:
-                fc = nn.Sequential(
-                    nn.Conv2d(channels[self.first_level], head_conv, kernel_size=3, padding=1, bias=True),
-                    nn.ReLU(inplace=True),
-                    nn.Conv2d(head_conv, classes, kernel_size=final_kernel, stride=1, padding=final_kernel // 2, bias=True))
+              fc = nn.Sequential(
+                  nn.Conv2d(channels[self.first_level], head_conv, kernel_size=3, padding=1, bias=True),
+                  nn.ReLU(inplace=True),
+                  nn.Conv2d(head_conv, classes, kernel_size=final_kernel, stride=1, padding=final_kernel // 2, bias=True))
               if 'hm' in head:
                 fc[-1].bias.data.fill_(-2.19)
               else:
@@ -518,15 +512,13 @@ class DLASeg(nn.Module):
             att = self.att_seg(att)
             z['att'] = att
             # Max Operation
-            att_1 = torch.max(att.detach(), 1)[0].unsqueeze(1)               
+            att_1 = torch.max(att.detach(), 1)[0].unsqueeze(1)        
+            # att_1 = torch.sum(att.detach(), 1).unsqueeze(1)        
 
 
         for head in self.heads:
-            if self.attention and ('hm' in head):
+            if self.attention and (('hm' in head) or ('wh' in head)) :
                 z[head] = self.__getattr__(head)(y[-1]*att_1)
-            elif self.attention and ('wh' in head):
-                att_wh = torch.cat((y[-1]*att_1, att.detach()), 1) # Skip-Connection for WH Regression
-                z[head] = self.__getattr__(head)(att_wh)            
             else:
                 z[head] = self.__getattr__(head)(y[-1])
 

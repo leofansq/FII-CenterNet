@@ -45,12 +45,17 @@ def demo(opt):
     else:
       image_names = [opt.demo]
     
+    error_img = []
     for (image_name) in image_names:
+      # try: 
       ret = detector.run(image_name)
       time_str = ''
       for stat in time_stats:
         time_str = time_str + '{} {:.3f}s |'.format(stat, ret[stat])
       print(time_str)
+      # except:
+      #   error_img.append(image_name)
+  print (error_img)
 if __name__ == '__main__':
   opt = opts().init()
   demo(opt)

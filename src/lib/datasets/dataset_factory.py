@@ -11,13 +11,15 @@ from .dataset.coco import COCO
 from .dataset.pascal import PascalVOC
 from .dataset.kitti import KITTI
 from .dataset.coco_hp import COCOHP
+# from .dataset.kitti_coco import KITTICOCO
 
 
 dataset_factory = {
   'coco': COCO,
   'pascal': PascalVOC,
   'kitti': KITTI,
-  'coco_hp': COCOHP
+  'coco_hp': COCOHP,
+  # 'kitti_coco': KITTICOCO
 }
 
 _sample_factory = {

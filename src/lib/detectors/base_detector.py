@@ -21,7 +21,7 @@ class BaseDetector(object):
       opt.device = torch.device('cpu')
     
     print('Creating model...')
-    self.model = create_model(opt.arch, opt.heads, opt.head_conv)
+    self.model = create_model(opt.arch, opt.heads, opt.head_conv, opt.attention)
     self.model = load_model(self.model, opt.load_model)
     self.model = self.model.to(opt.device)
     self.model.eval()
@@ -114,6 +114,12 @@ class BaseDetector(object):
       pre_time += pre_process_time - scale_start_time
       
       output, dets, forward_time = self.process(images, return_time=True)
+
+      # import os
+      # _, name = os.path.split(image_or_path_or_tensor)
+      # im = output['att'][0, 0].numpy()
+      # print (im.type, name)
+      # cv2.imwrite("/data1/zhufenghua/leofansq/cnet/output/"+name, output['att'][0, 0])
 
       torch.cuda.synchronize()
       net_time += forward_time - pre_process_time

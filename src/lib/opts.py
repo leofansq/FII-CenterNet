@@ -12,8 +12,8 @@ class opts(object):
     # basic experiment setting
     self.parser.add_argument('task', default='ctdet',
                              help='ctdet | ddd | multi_pose | exdet')
-    self.parser.add_argument('--dataset', default='coco',
-                             help='coco | kitti | coco_hp | pascal')
+    self.parser.add_argument('--dataset', default='pascal',
+                             help='coco | kitti | coco_hp | pascal') #kitti
     self.parser.add_argument('--exp_id', default='default')
     self.parser.add_argument('--test', action='store_true')
     self.parser.add_argument('--debug', type=int, default=0,
@@ -81,11 +81,11 @@ class opts(object):
     
     # train
     self.parser.add_argument('--lr', type=float, default=1.25e-4, 
-                             help='learning rate for batch size 32.')
-    self.parser.add_argument('--lr_step', type=str, default='90,120',
-                             help='drop learning rate by 10.')
-    self.parser.add_argument('--num_epochs', type=int, default=140,
-                             help='total training epochs.')
+                             help='learning rate for batch size 32:1e-4.')
+    self.parser.add_argument('--lr_step', type=str, default='45,60',
+                             help='drop learning rate by 10.(90,120)')
+    self.parser.add_argument('--num_epochs', type=int, default=70,
+                             help='total training epochs.(140)')
     self.parser.add_argument('--batch_size', type=int, default=32,
                              help='batch size')
     self.parser.add_argument('--master_batch_size', type=int, default=-1,
@@ -160,7 +160,13 @@ class opts(object):
     self.parser.add_argument('--off_weight', type=float, default=1,
                              help='loss weight for keypoint local offsets.')
     self.parser.add_argument('--wh_weight', type=float, default=0.1,
-                             help='loss weight for bounding box size.')
+                             help='loss weight for bounding box size.(0.1)')
+    ###########################  2.20  ########################
+    self.parser.add_argument('--attention', action='store_true',
+                             help='add attention.')
+    self.parser.add_argument('--att_weight', type=float, default=1,
+                             help='loss weight for attention.')
+    ###########################################################
     # multi_pose
     self.parser.add_argument('--hp_weight', type=float, default=1,
                              help='loss weight for human pose offset.')
@@ -335,9 +341,15 @@ class opts(object):
 
   def init(self, args=''):
     default_dataset_info = {
-      'ctdet': {'default_resolution': [512, 512], 'num_classes': 80, 
-                'mean': [0.408, 0.447, 0.470], 'std': [0.289, 0.274, 0.278],
-                'dataset': 'coco'},
+      'ctdet': {'default_resolution': [384, 1280], 'num_classes': 3, 
+                'mean': [0.485, 0.456, 0.406], 'std': [0.229, 0.224, 0.225],
+                'dataset': 'kitti'},
+      # 'ctdet': {'default_resolution': [512, 512], 'num_classes': 3, 
+      #           'mean': [0.368, 0.387, 0.376], 'std': [0.100, 0.102, 0.106],
+      #           'dataset': 'kitti_coco'},
+      # 'ctdet': {'default_resolution': [512, 512], 'num_classes': 80, 
+      #           'mean': [0.408, 0.447, 0.470], 'std': [0.289, 0.274, 0.278],
+      #           'dataset': 'coco'},
       'exdet': {'default_resolution': [512, 512], 'num_classes': 80, 
                 'mean': [0.408, 0.447, 0.470], 'std': [0.289, 0.274, 0.278],
                 'dataset': 'coco'},

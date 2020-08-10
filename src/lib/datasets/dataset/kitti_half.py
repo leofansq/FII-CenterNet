@@ -22,20 +22,26 @@ class KITTI(data.Dataset):
 
   def __init__(self, opt, split):
     super(KITTI, self).__init__()
-    self.data_dir = os.path.join(opt.data_dir, 'kitti')
-    self.img_dir = os.path.join(self.data_dir, 'images', 'trainval')
-    if opt.trainval:
-      split = 'trainval' if split == 'train' else 'test'
-      self.img_dir = os.path.join(self.data_dir, 'images', split)
-      self.annot_path = os.path.join(
-        self.data_dir, 'annotations', 'kitti_{}.json').format(split)
+    self.data_dir = os.path.join(opt.data_dir, 'KITTI_COCO')
+    self.img_dir = os.path.join(self.data_dir, 'images')
+
+    if split == 'val' or split == 'test':
+      self.annot_path = os.path.join(self.data_dir, 'annotations', 'val.json')
     else:
-      self.annot_path = os.path.join(self.data_dir, 
-        'annotations', 'kitti_{}_{}.json').format(opt.kitti_split, split)
-    self.max_objs = 50
+      self.annot_path = os.path.join(self.data_dir, 'annotations', 'train.json')
+    # if opt.trainval:
+    #   split = 'trainval' if split == 'train' else 'test'
+    #   self.img_dir = os.path.join(self.data_dir, 'images', split)
+    #   self.annot_path = os.path.join(
+    #     self.data_dir, 'annotations', 'kitti_{}.json').format(split)
+    # else:
+    #   self.annot_path = os.path.join(self.data_dir, 
+    #     'annotations', 'kitti_{}_{}.json').format(opt.kitti_split, split)
+    self.max_objs = 50 #50
     self.class_name = [
-      '__background__', 'Pedestrian', 'Car', 'Cyclist']
-    self.cat_ids = {1:0, 2:1, 3:2, 4:-3, 5:-3, 6:-2, 7:-99, 8:-99, 9:-1}
+      '__background__', 'Car', 'Pedestrian', 'Cyclist']  #, 'Cyclist'
+    self.cat_ids = {1:0, 2:1, 3:2}  #, 3:2  
+    # self.cat_ids = {1:0, 2:1, 3:2, 4:-3, 5:-3, 6:-2, 7:-99, 8:-99, 9:-1}
     
     self._data_rng = np.random.RandomState(123)
     self._eig_val = np.array([0.2141788, 0.01817699, 0.00341571],
@@ -70,20 +76,22 @@ class KITTI(data.Dataset):
     if not os.path.exists(results_dir):
       os.mkdir(results_dir)
     for img_id in results.keys():
-      out_path = os.path.join(results_dir, '{:06d}.txt'.format(img_id))
+      out_path = os.path.join(results_dir, '{}.txt'.format(img_id))
       f = open(out_path, 'w')
       for cls_ind in results[img_id]:
         for j in range(len(results[img_id][cls_ind])):
           class_name = self.class_name[cls_ind]
-          f.write('{} 0.0 0'.format(class_name))
-          for i in range(len(results[img_id][cls_ind][j])):
+          f.write('{} 0.0 0 -10'.format(class_name))
+          for i in range(len(results[img_id][cls_ind][j])-1):
             f.write(' {:.2f}'.format(results[img_id][cls_ind][j][i]))
+          f.write(' 0.0 0.0 0.0 0.0 0.0 0.0 0.0 {:.2f}'.format(results[img_id][cls_ind][j][i+1]))
           f.write('\n')
       f.close()
 
   def run_eval(self, results, save_dir):
     self.save_results(results, save_dir)
-    os.system('./tools/kitti_eval/evaluate_object_3d_offline ' + \
-              '../data/kitti/training/label_val ' + \
-              '{}/results/'.format(save_dir))
+    # os.system('./tools/kitti_eval/evaluate_object_3d_offline ' + \
+    #           '../data/kitti/training/Labels ' + \
+    #           '{}/results/'.format(save_dir))
+    
     
