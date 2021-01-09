@@ -2,6 +2,10 @@
 
 ![architecture](./img/architecture.png)
 
+> For technical details, please refer to:
+>
+> [FII-CenterNet: An Anchor-free Detector with Foreground Attention for Traffic Object Detection](https://ieeexplore.ieee.org/document/9316984)
+
 ### (0) Abstract
 Most successful object detectors are anchor-based, which is difficult to adapt to the diversity of traffic objects. We propose a novel anchor-free method, called FIICenterNet. It introduces the foreground information to CenterNet to eliminate the interference of complex background information in traffic scenes. The foreground region proposal network is based on semantic segmentation. Midground is introduced as the transition between foreground and background. In addition to foreground location information, scale information is introduced to improve the regression results.
 
@@ -131,3 +135,23 @@ This code has been tested with Python 3.6, PyTorch v0.4.1, CUDA 9.0 and cuDNN v7
 ```
 python demo.py ctdet --demo /.../FII-CenterNet/kitti_images/ --load_model /your_path/your_model.pth --attention --debug=2
 ```
+
+### Citation
+
+If you find our work useful in your research, please consider citing:
+
+```
+@ARTICLE{9316984,
+  author={S. {Fan} and F. {Zhu} and S. {Chen} and H. {Zhang} and B. {Tian} and Y. {Lv} and F. -Y. {Wang}},
+  journal={IEEE Transactions on Vehicular Technology}, 
+  title={FII-CenterNet: An Anchor-free Detector with Foreground Attention for Traffic Object Detection}, 
+  year={2021},
+  volume={},
+  number={},
+  pages={1-1},
+  doi={10.1109/TVT.2021.3049805}
+}
+```
+
+### Acknowledgment
+Part of our code refers to the recent work [Objects as Points](https://github.com/xingyizhou/CenterNet).
