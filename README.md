@@ -142,15 +142,14 @@ If you find our work useful in your research, please consider citing:
 
 ```
 @ARTICLE{9316984,
-  author={S. {Fan} and F. {Zhu} and S. {Chen} and H. {Zhang} and B. {Tian} and Y. {Lv} and F. -Y. {Wang}},
+  author={Fan, Siqi and Zhu, Fenghua and Chen, Shichao and Zhang, Hui and Tian, Bin and Lv, Yisheng and Wang, Fei-Yue},
   journal={IEEE Transactions on Vehicular Technology}, 
-  title={FII-CenterNet: An Anchor-free Detector with Foreground Attention for Traffic Object Detection}, 
+  title={FII-CenterNet: An Anchor-Free Detector With Foreground Attention for Traffic Object Detection}, 
   year={2021},
-  volume={},
-  number={},
-  pages={1-1},
-  doi={10.1109/TVT.2021.3049805}
-}
+  volume={70},
+  number={1},
+  pages={121-132},
+  doi={10.1109/TVT.2021.3049805}}
 ```
 
 ### Acknowledgment
